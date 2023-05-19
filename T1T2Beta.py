@@ -112,7 +112,7 @@ for epoch in range(1000):
         
         output = model(T1)
         
-        mse = Gaussian_CE_loss(T2, output, -100, sigma=SIGMA)
+        mse = Gaussian_CE_loss(T2, output, -0.01, sigma=SIGMA)
         
         mse.backward()
         
@@ -143,4 +143,4 @@ for epoch in range(1000):
         print('  * val  ' +
         f'Loss: {total_loss/len(val_dset):.7f}, ')
 
-    torch.save(model.state_dict(), '/home1/zamzam/Fairness/modelsBeta/model_100_{}.pth'.format(epoch))
+    torch.save(model.state_dict(), '/home1/zamzam/Fairness/modelsBeta/model_001_{}.pth'.format(epoch))

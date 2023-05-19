@@ -12,6 +12,8 @@ from tqdm.notebook import tqdm
 import torch
 from monai.networks.nets import unet
 from torch.utils.data import DataLoader, Dataset
+import csv
+import pandas as pd
 manualSeed = 999
 random.seed(manualSeed)
 torch.manual_seed(manualSeed)
@@ -241,7 +243,7 @@ discriminator.to(device)
 
 for epoch in range(1000):
     total_loss = 0
-    for i, data in enumerate(tqdm.tqdm(train_loader)):
+    for i, data in enumerate(tqdm(train_loader)):
         # Training the generator
         generator_optimizer.zero_grad()
 
@@ -264,7 +266,7 @@ for epoch in range(1000):
 
         
 
-        gen_loss = torch.mean(torch.mean(adversarial_loss(discriminator(output), valid), dim=(1,2,3))  * ratio)
+        gen_loss = torch.mean(torch.mean(adversarial_loss(discriminator(output), valid), dim=(1))  * ratio)
         
         if epoch >threshhold:
             g_loss = mse + gen_loss
@@ -292,7 +294,7 @@ for epoch in range(1000):
 
     total_loss = 0
 
-    for i, data in enumerate(tqdm.tqdm(val_loader)):
+    for i, data in enumerate(tqdm(val_loader)):
         with torch.no_grad():
             T1, T2, _, _ = data
             #T1, T2 = T1.swapaxes(0,1), T2.swapaxes(0,1)
