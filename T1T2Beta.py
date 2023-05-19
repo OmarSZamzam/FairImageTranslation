@@ -106,7 +106,8 @@ for epoch in range(1000):
         optimizer.zero_grad()
         
         T1, T2, _, _ = data
-        T1, T2 = T1.swapaxes(0,1), T2.swapaxes(0,1)
+        # T1, T2 = T1.swapaxes(0,1), T2.swapaxes(0,1)
+        T1, T2 = T1.view(-1,1,T1.shape[2],T1.shape[3]), T2.view(-1,1,T2.shape[2],T2.shape[3]) 
         T1, T2 = T1.to(device), T2.to(device)
         
         output = model(T1)
@@ -129,7 +130,8 @@ for epoch in range(1000):
         for i, data in enumerate(tqdm(val_loader)):
             with torch.no_grad():
                 T1, T2, _, _ = data
-                T1, T2 = T1.swapaxes(0,1), T2.swapaxes(0,1)
+                # T1, T2 = T1.swapaxes(0,1), T2.swapaxes(0,1)
+                T1, T2 = T1.view(-1,1,T1.shape[2],T1.shape[3]), T2.view(-1,1,T2.shape[2],T2.shape[3]) 
                 T1, T2 = T1.to(device), T2.to(device)
 
                 output = model(T1)
