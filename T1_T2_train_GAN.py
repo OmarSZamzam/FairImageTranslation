@@ -21,7 +21,7 @@ import torch.optim as optim
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 class CustomImageDataset(Dataset):
-    def __init__(self, img_dir, sample_number = 4, transform=None):
+    def __init__(self, img_dir, sample_number = 1, transform=None):
         self.sample_number = sample_number
         self.img_dir = img_dir
         self.files = os.listdir(img_dir)
@@ -66,25 +66,16 @@ train_dsetHCP = CustomImageDataset(img_dir='/scratch1/zamzam/HCP_nt_train')
 train_dsetCamCan = CustomImageDataset(img_dir='/scratch1/akrami/CAMCAN_nt_train')
 
 train_dset = torch.utils.data.ConcatDataset([train_dsetHCP, train_dsetCamCan])
-train_loader = DataLoader(train_dset, batch_size=1,shuffle=True,num_workers=1)
+train_loader = DataLoader(train_dset, batch_size=20,shuffle=True,num_workers=1)
 
 val_dsetHCP = CustomImageDataset(img_dir='/scratch1/zamzam/HCP_nt_val')
 val_dsetCamCan = CustomImageDataset(img_dir='/scratch1/akrami/CAMCAN_nt_val')
 
 val_dset = torch.utils.data.ConcatDataset([val_dsetHCP, val_dsetCamCan])
-val_loader = DataLoader(val_dset, batch_size=1,shuffle=True,num_workers=1)
+val_loader = DataLoader(val_dset, batch_size=20,shuffle=True,num_workers=1)
 
-train_dsetHCP = CustomImageDataset(img_dir='/scratch1/zamzam/HCP_nt_train')
-train_dsetCamCan = CustomImageDataset(img_dir='/scratch1/akrami/CAMCAN_nt_train')
 
-train_dset = torch.utils.data.ConcatDataset([train_dsetHCP, train_dsetCamCan])
-train_loader = DataLoader(train_dset, batch_size=1,shuffle=True,num_workers=1)
 
-val_dsetHCP = CustomImageDataset(img_dir='/scratch1/zamzam/HCP_nt_val')
-val_dsetCamCan = CustomImageDataset(img_dir='/scratch1/akrami/CAMCAN_nt_val')
-
-val_dset = torch.utils.data.ConcatDataset([val_dsetHCP, val_dsetCamCan])
-val_loader = DataLoader(val_dset, batch_size=1,shuffle=True,num_workers=1)
 
 
 import torch.nn as nn
@@ -156,7 +147,7 @@ for epoch in range(1000):
         generator_optimizer.zero_grad()
 
         T1, T2, _, _ = data
-        T1, T2 = T1.swapaxes(0,1), T2.swapaxes(0,1)
+        #T1, T2 = T1.swapaxes(0,1), T2.swapaxes(0,1)
         T1, T2 = T1.to(device), T2.to(device)
 
         output = generator(T1)
@@ -200,7 +191,7 @@ for epoch in range(1000):
         torch.save(generator.state_dict(), f'/scratch1/akrami/Projects/T1_T2/models/GAN/T1_T2{epoch}.pt')
         with torch.no_grad():
             T1, T2, _, _ = data
-            T1, T2 = T1.swapaxes(0,1), T2.swapaxes(0,1)
+            #T1, T2 = T1.swapaxes(0,1), T2.swapaxes(0,1)
             T1, T2 = T1.to(device), T2.to(device)
 
             output = generator(T1)
