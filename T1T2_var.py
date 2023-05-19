@@ -10,7 +10,7 @@ import glob
 import pickle
 import matplotlib.pyplot as plt
 from scipy import ndimage
-from tqdm.notebook import tqdm
+from tqdm import tqdm
 import torch
 from scipy import stats
 from monai.networks.nets import unet
@@ -137,7 +137,7 @@ for epoch in range(1000):
         
         optimizer.zero_grad()
         
-        T1, T2, _, _, _ = data
+        T1, T2 = data
         # T1, T2 = T1.swapaxes(0,1), T2.swapaxes(0,1)
         T1, T2 = T1.to(device), T2.to(device)
         
@@ -161,7 +161,7 @@ for epoch in range(1000):
 
         for i, data in enumerate(tqdm(val_loader)):
             with torch.no_grad():
-                T1, T2, _, _, _ = data
+                T1, T2  = data
                 #T1, T2 = T1.swapaxes(0,1), T2.swapaxes(0,1)
                 T1, T2 = T1.to(device), T2.to(device)
 
@@ -174,4 +174,4 @@ for epoch in range(1000):
         print('  * val  ' +
         f'Loss: {total_loss/len(val_dset):.7f}, ')
 
-    torch.save(generator.state_dict(), f'/scratch1/akrami/Projects/T1_T2/models/Unet/T1_T2{epoch}_unet_var.pt')
+    torch.save(model.state_dict(), f'/scratch1/akrami/Projects/T1_T2/models/Unet/T1_T2{epoch}_unet_var.pt')

@@ -18,7 +18,8 @@ from torch.cuda.amp import GradScaler, autocast
 from tqdm import tqdm
 import torch.nn.functional as F
 import sys
-
+import csv
+import pandas as pd
 
 with tqdm(total=100, dynamic_ncols=False) as pbar:
     for i in range(100):
@@ -156,7 +157,7 @@ if pre_train:
 
 
 
-
+init_loss = torch.nn.MSELoss(reduction = 'none')
 scaler = GradScaler()
 
 
