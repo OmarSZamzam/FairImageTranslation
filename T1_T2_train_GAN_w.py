@@ -8,37 +8,15 @@ from skimage.transform import resize
 import glob
 import pickle
 from scipy import ndimage
-import tqdm
-import torch
-from monai.networks.nets import unet
-from torch.utils.data import DataLoader, Dataset
-import csv
-import pandas as pd
-import nibabel as nib
-import scipy
-import io
-import os
-import random
-import math
-import numpy as np
-from skimage.transform import resize
-import glob
-import pickle
-import matplotlib.pyplot as plt
-from scipy import ndimage
 from tqdm.notebook import tqdm
 import torch
-from scipy import stats
 from monai.networks.nets import unet
 from torch.utils.data import DataLoader, Dataset
-import csv
-import pandas as pd
 manualSeed = 999
 random.seed(manualSeed)
 torch.manual_seed(manualSeed)
 import torch.nn as nn
 import torch.optim as optim
-
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 threshhold = 10
