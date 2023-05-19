@@ -188,7 +188,7 @@ for epoch in range(1000):
     total_loss = 0
 
     for i, data in enumerate(tqdm.tqdm(val_loader)):
-        torch.save(generator.state_dict(), f'/scratch1/akrami/Projects/T1_T2/models/GAN/T1_T2{epoch}.pt')
+        torch.save(generator.state_dict(), f'/scratch1/akrami/Projects/T1_T2/models/GAN/T1_T2{epoch}_b20.pt')
         with torch.no_grad():
             T1, T2, _, _ = data
             #T1, T2 = T1.swapaxes(0,1), T2.swapaxes(0,1)
