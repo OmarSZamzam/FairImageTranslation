@@ -21,6 +21,7 @@ import torch.optim as optim
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 threshhold = 10
+
 class CustomImageDataset(Dataset):
     def __init__(self, img_dir, sample_number = 1, transform=None):
         self.sample_number = sample_number
@@ -140,7 +141,7 @@ discriminator_optimizer = optim.Adam(discriminator.parameters(), lr=0.0002, beta
 generator.to(device)
 discriminator.to(device)
 
-
+init_loss = torch.nn.MSELoss(reduction = 'none')
 for epoch in range(1000):
     total_loss = 0
     for i, data in enumerate(tqdm.tqdm(train_loader)):
@@ -153,7 +154,8 @@ for epoch in range(1000):
 
         output = generator(T1)
 
-        mse = loss(output, T2)
+        initial = torch.mean(init_loss(output, T2), dim = (1, 2, 3))
+        mse = torch.mean(initial) + torch.var(initial)
         
         # Adversarial loss
         valid = torch.ones(output.size(0), 1).to(device)
@@ -163,10 +165,11 @@ for epoch in range(1000):
 
         gen_loss = adversarial_loss(discriminator(output), valid)
         
-        if epoch >threshhold:
+
+        if epoch> threshhold:
             g_loss = mse + gen_loss
         else:
-            g_loss = mse
+             g_loss = mse
 
         g_loss.backward()
         generator_optimizer.step()
@@ -190,7 +193,7 @@ for epoch in range(1000):
     total_loss = 0
 
     for i, data in enumerate(tqdm.tqdm(val_loader)):
-        torch.save(generator.state_dict(), f'/scratch1/akrami/Projects/T1_T2/models/GAN/T1_T2{epoch}_b20_w.pt')
+        torch.save(generator.state_dict(), f'/scratch1/akrami/Projects/T1_T2/models/GAN/T1_T2{epoch}_var.pt')
         with torch.no_grad():
             T1, T2, _, _ = data
             #T1, T2 = T1.swapaxes(0,1), T2.swapaxes(0,1)
