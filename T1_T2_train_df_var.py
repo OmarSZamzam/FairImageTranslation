@@ -34,7 +34,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 class CustomImageDataset(Dataset):
-    def __init__(self, img_dir, sample_number = 1, transform=None):
+    def __init__(self, img_dir, sample_number = 4, transform=None):
         self.sample_number = sample_number
         self.img_dir = img_dir
         self.files = os.listdir(img_dir)
@@ -117,7 +117,7 @@ pre_epoch = 0
 
 if pre_train:
     pre_epoch = 154
-    model.load_state_dict(torch.load( f'/scratch1/akrami/Projects/T1_T2/models/T1_T2{pre_epoch}_b20.pt'))
+    model.load_state_dict(torch.load( f'/scratch1/akrami/Projects/T1_T2/models/T1_T2{pre_epoch}_b20_var_s4.pt'))
     print('loaded the pre train model')
 
 
@@ -125,15 +125,14 @@ if pre_train:
 
 scaler = GradScaler()
 
-
+init_loss = torch.nn.MSELoss(reduction = 'none')
 for epoch in range(n_epochs):
     model.train()
     epoch_loss = 0
-   # print('pass1')
-    for step, data in enumerate(tqdm(train_loader,file=sys.stdout,position=0, leave=True)):
-        
+    print('Training stated')
+    for step, data in enumerate(train_loader):
         T1, T2, _, _ = data
-        T1, T2 = T1.swapaxes(0,1), T2.swapaxes(0,1)
+        T1, T2 = T1.view(-1,1,T1.shape[2],T1.shape[3]), T2.view(-1,1,T2.shape[2],T2.shape[3])
         images, seg = T1.to(device), T2.to(device)
         
         #images = data["image"].to(device)
@@ -153,23 +152,24 @@ for epoch in range(n_epochs):
             )  # we concatenate the brain MR image with the noisy segmenatation mask, to condition the generation process
             prediction = model(x=combined, timesteps=timesteps)
             # Get model prediction
-            loss = F.mse_loss(prediction.float(), noise.float())
+            initial = torch.mean(init_loss(prediction.float(), noise.float()), dim = (1, 2, 3))
+            loss = torch.mean(initial) + torch.var(initial)
+        
         scaler.scale(loss).backward()
         scaler.step(optimizer)
         scaler.update()
         epoch_loss += loss.item()
-          
-        print('  * train  ' +
+    print('  * train  ' +
           f'Loss: {epoch_loss/len(train_loader):.7f}, ')
 
     epoch_loss_list.append(epoch_loss / (step + 1))
     if (epoch) % val_interval == 0:
+        torch.save(model.state_dict(), f'/scratch1/akrami/Projects/T1_T2/models/T1_T2{epoch+pre_epoch}_b20_var_s4.pt')
         model.eval()
         val_epoch_loss = 0
-        for step, data in enumerate(tqdm(val_loader,file=sys.stdout,position=0, leave=True)):
-            torch.save(model.state_dict(), f'/scratch1/akrami/Projects/T1_T2/models/T1_T2{epoch+pre_epoch}_b20.pt')
+        for step, data in enumerate(val_loader):
             T1, T2, _, _ = data
-            T1, T2 = T1.swapaxes(0,1), T2.swapaxes(0,1)
+            T1, T2 = T1.view(-1,1,T1.shape[2],T1.shape[3]), T2.view(-1,1,T2.shape[2],T2.shape[3])
             images, seg = T1.to(device), T2.to(device)
             timesteps = torch.randint(0, 1000, (len(images),)).to(device)
             with torch.no_grad():
@@ -184,10 +184,12 @@ for epoch in range(n_epochs):
         print('  * val  ' +
           f'Loss: {val_epoch_loss/len(val_loader):.7f}, ')
         val_epoch_loss_list.append(val_epoch_loss / (step + 1))
+        
+        print(f'epoch{epoch}')
 
 
 
-torch.save(model.state_dict(), f'/scratch1/akrami/Projects/T1_T2/models/T1_T2{epoch+pre_epoch}_b20.pt')
+torch.save(model.state_dict(), f'/scratch1/akrami/Projects/T1_T2/models/T1_T2{epoch+pre_epoch}_b20_var_s4.pt')
 total_time = time.time() - total_start
 print(f"train diffusion completed, total time: {total_time}.")
 plt.style.use("seaborn-bright")
@@ -206,4 +208,4 @@ plt.xlabel("Epochs", fontsize=16)
 plt.ylabel("Loss", fontsize=16)
 plt.legend(prop={"size": 14})
 plt.show()
-plt.savefig(f'./"result_translation/loss.png')
+plt.savefig(f'./"result_translation/loss_var_s4.png')

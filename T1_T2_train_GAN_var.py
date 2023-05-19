@@ -23,7 +23,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 threshhold = 10
 
 class CustomImageDataset(Dataset):
-    def __init__(self, img_dir, sample_number = 1, transform=None):
+    def __init__(self, img_dir, sample_number = 4, transform=None):
         self.sample_number = sample_number
         self.img_dir = img_dir
         self.files = os.listdir(img_dir)
@@ -144,12 +144,12 @@ discriminator.to(device)
 init_loss = torch.nn.MSELoss(reduction = 'none')
 for epoch in range(1000):
     total_loss = 0
-    for i, data in enumerate(tqdm.tqdm(train_loader)):
+    for i, data in enumerate(train_loader):
         # Training the generator
         generator_optimizer.zero_grad()
 
         T1, T2, _, _ = data
-        #T1, T2 = T1.swapaxes(0,1), T2.swapaxes(0,1)
+        T1, T2 = T1.view(-1,1,T1.shape[2],T1.shape[3]), T2.view(-1,1,T2.shape[2],T2.shape[3]) 
         T1, T2 = T1.to(device), T2.to(device)
 
         output = generator(T1)
@@ -192,11 +192,11 @@ for epoch in range(1000):
 
     total_loss = 0
 
-    for i, data in enumerate(tqdm.tqdm(val_loader)):
-        torch.save(generator.state_dict(), f'/scratch1/akrami/Projects/T1_T2/models/GAN/T1_T2{epoch}_var.pt')
+    for i, data in enumerate(val_loader):
+        
         with torch.no_grad():
             T1, T2, _, _ = data
-            #T1, T2 = T1.swapaxes(0,1), T2.swapaxes(0,1)
+            T1, T2 = T1.view(-1,1,T1.shape[2],T1.shape[3]), T2.view(-1,1,T2.shape[2],T2.shape[3]) 
             T1, T2 = T1.to(device), T2.to(device)
 
             output = generator(T1)
@@ -204,9 +204,12 @@ for epoch in range(1000):
             mse = loss(output, T2)
 
             total_loss += mse
-
+            
+    torch.save(generator.state_dict(), f'/scratch1/akrami/Projects/T1_T2/models/GAN/T1_T2{epoch}_var_4s.pt')
     print('  * val  ' +
           f'Loss: {total_loss/len(val_dset):.7f}, ')
+    
+    print(f'epoch{epoch})
     
     
     

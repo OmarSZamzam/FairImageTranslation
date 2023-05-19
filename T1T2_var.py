@@ -37,7 +37,7 @@ print(np.shape(HCP_info))
 print(np.shape(CamCan_info))
 
 class CustomImageDataset(Dataset):
-    def __init__(self, img_dir, info, sample_number = 1, transform=None):
+    def __init__(self, img_dir, info, sample_number = 4, transform=None):
         self.sample_number = sample_number
         self.img_dir = img_dir
         self.files = os.listdir(img_dir)
@@ -104,15 +104,6 @@ val_dsetCamCan = CustomImageDataset(img_dir='/scratch1/akrami/CAMCAN_nt_val', in
 val_dset = torch.utils.data.ConcatDataset([val_dsetHCP, val_dsetCamCan])
 val_loader = DataLoader(val_dset, batch_size=20,shuffle=True,num_workers=1)
 
-test_dsetHCP = CustomImageDataset(img_dir='/scratch1/zamzam/HCP_nt_test', info = HCP_info)
-test_dsetCamCan = CustomImageDataset(img_dir='/scratch1/akrami/CAMCAN_nt_test', info = CamCan_info)
-
-test_dset = torch.utils.data.ConcatDataset([test_dsetHCP, test_dsetCamCan])
-test_loader = DataLoader(test_dset, batch_size=20,shuffle=True,num_workers=1)
-
-test_loaderHCP = DataLoader(test_dsetHCP, batch_size=20,shuffle=True,num_workers=1)
-test_loaderCamCan = DataLoader(test_dsetCamCan, batch_size=20,shuffle=True,num_workers=1)
-
 
 
 model = unet.UNet(
@@ -133,12 +124,12 @@ print(count_parameters(model))
 
 for epoch in range(1000):
     total_loss = 0
-    for i, data in enumerate(tqdm(train_loader)):
+    for i, data in enumerate(train_loader):
         
         optimizer.zero_grad()
         
         T1, T2 = data
-        # T1, T2 = T1.swapaxes(0,1), T2.swapaxes(0,1)
+        T1, T2 = T1.view(-1,1,T1.shape[2],T1.shape[3]), T2.view(-1,1,T2.shape[2],T2.shape[3]) 
         T1, T2 = T1.to(device), T2.to(device)
         
         output = model(T1)
@@ -159,10 +150,10 @@ for epoch in range(1000):
     
         total_loss = 0
 
-        for i, data in enumerate(tqdm(val_loader)):
+        for i, data in enumerate(val_loader):
             with torch.no_grad():
                 T1, T2  = data
-                #T1, T2 = T1.swapaxes(0,1), T2.swapaxes(0,1)
+                T1, T2 = T1.view(-1,1,T1.shape[2],T1.shape[3]), T2.view(-1,1,T2.shape[2],T2.shape[3]) 
                 T1, T2 = T1.to(device), T2.to(device)
 
                 output = model(T1)
@@ -173,5 +164,6 @@ for epoch in range(1000):
 
         print('  * val  ' +
         f'Loss: {total_loss/len(val_dset):.7f}, ')
+    print(f'epoch{epoch})
 
-    torch.save(model.state_dict(), f'/scratch1/akrami/Projects/T1_T2/models/Unet/T1_T2{epoch}_unet_var.pt')
+    torch.save(model.state_dict(), f'/scratch1/akrami/Projects/T1_T2/models/Unet/T1_T2{epoch}_unet_var_s4.pt')
