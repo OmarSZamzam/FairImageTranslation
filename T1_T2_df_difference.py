@@ -106,92 +106,18 @@ train_dsetHCP = CustomImageDataset(img_dir='/scratch1/zamzam/HCP_nt_train', info
 train_dsetCamCan = CustomImageDataset(img_dir='/scratch1/akrami/CAMCAN_nt_train', info = CamCan_info)
 
 train_dset = torch.utils.data.ConcatDataset([train_dsetHCP, train_dsetCamCan])
-train_loader = DataLoader(train_dset, batch_size=20,shuffle=True,num_workers=1)
+train_loader = DataLoader(train_dset, batch_size=10,shuffle=True,num_workers=1)
 
 val_dsetHCP = CustomImageDataset(img_dir='/scratch1/zamzam/HCP_nt_val', info = HCP_info)
 val_dsetCamCan = CustomImageDataset(img_dir='/scratch1/akrami/CAMCAN_nt_val', info = CamCan_info)
 
 val_dset = torch.utils.data.ConcatDataset([val_dsetHCP, val_dsetCamCan])
-val_loader = DataLoader(val_dset, batch_size=20,shuffle=True,num_workers=1)
+val_loader = DataLoader(val_dset, batch_size=10,shuffle=True,num_workers=1)
 
-test_dsetHCP = CustomImageDataset(img_dir='/scratch1/zamzam/HCP_nt_test', info = HCP_info)
-test_dsetCamCan = CustomImageDataset(img_dir='/scratch1/akrami/CAMCAN_nt_test', info = CamCan_info)
 
-test_dset = torch.utils.data.ConcatDataset([test_dsetHCP, test_dsetCamCan])
-test_loader = DataLoader(test_dset, batch_size=20,shuffle=True,num_workers=1)
 
-test_loaderHCP = DataLoader(test_dsetHCP, batch_size=20,shuffle=True,num_workers=1)
-test_loaderCamCan = DataLoader(test_dsetCamCan, batch_size=20,shuffle=True,num_workers=1)
 
-trainHCP = os.listdir('/scratch1/zamzam/HCP_nt_train')
-for i in range(len(trainHCP)):
-    trainHCP[i] = trainHCP[i][:-3]
-trainCamCan = os.listdir('/scratch1/akrami/CAMCAN_nt_train')
-for i in range(len(trainCamCan)):
-    trainCamCan[i] = trainCamCan[i][6:-3]
-    
-trainHCP = np.array(trainHCP).reshape(-1, 1)
-trainHCP = np.hstack((trainHCP, np.array(['A'] * len(trainHCP)).reshape(-1, 1)))
-
-trainCamCan = np.array(trainCamCan).reshape(-1, 1)
-trainCamCan = np.hstack((trainCamCan,  np.array(['A'] * len(trainCamCan)).reshape(-1, 1)))
-
-for i in range(len(trainHCP)):
-    for j in range(len(HCP_info)):
-        if trainHCP[i,0] == HCP_info[j,0]:
-            trainHCP[i,1] = HCP_info[j,2]
-            break
-for i in range(len(trainCamCan)):
-    for j in range(len(CamCan_info)):
-        if trainCamCan[i,0][:] == CamCan_info[j,0]:
-            trainCamCan[i,1] = CamCan_info[j,2]
-            break
-            
-
-trainHCP = os.listdir('/scratch1/zamzam/HCP_nt_train')
-for i in range(len(trainHCP)):
-    trainHCP[i] = trainHCP[i][:-3]
-trainCamCan = os.listdir('/scratch1/akrami/CAMCAN_nt_train')
-for i in range(len(trainCamCan)):
-    trainCamCan[i] = trainCamCan[i][6:-3]
-    
-trainHCP = np.array(trainHCP).reshape(-1, 1)
-trainHCP = np.hstack((trainHCP, np.array(['A'] * len(trainHCP)).reshape(-1, 1)))
-
-trainCamCan = np.array(trainCamCan).reshape(-1, 1)
-trainCamCan = np.hstack((trainCamCan,  np.array(['A'] * len(trainCamCan)).reshape(-1, 1)))
-
-for i in range(len(trainHCP)):
-    for j in range(len(HCP_info)):
-        if trainHCP[i,0] == HCP_info[j,0]:
-            trainHCP[i,1] = HCP_info[j,2]
-            break
-for i in range(len(trainCamCan)):
-    for j in range(len(CamCan_info)):
-        if trainCamCan[i,0][:] == CamCan_info[j,0]:
-            trainCamCan[i,1] = CamCan_info[j,2]
-            break
-            
-
-confusion_matrix = [[0,0],[0,0]]
-confusion_matrix = np.array(confusion_matrix)
-for i in range(len(trainHCP)):
-    if trainHCP[i,1]=='M':
-        confusion_matrix[0,0]+=1
-    if trainHCP[i,1]=='F':
-        confusion_matrix[0,1]+=1
-        
-for i in range(len(trainCamCan)):
-    if trainCamCan[i,1]=='M':
-        confusion_matrix[1,0]+=1
-    if trainCamCan[i,1]=='F':
-        confusion_matrix[1,1]+=1
-        
-
-ratios = np.sum(confusion_matrix)/confusion_matrix
-ratios = ratios/np.sum(ratios)
-print(confusion_matrix)
-print(ratios)
+ 
 
 model = DiffusionModelUNet(
     spatial_dims=2,
@@ -303,7 +229,7 @@ for epoch in range(n_epochs):
         print('  * val  ' +
           f'Loss: {val_epoch_loss/len(val_loader):.7f}, ')
         val_epoch_loss_list.append(val_epoch_loss / (step + 1))
-        print(f'epoch{epoch})
+        print(f'epoch{epoch}')
 
 
 

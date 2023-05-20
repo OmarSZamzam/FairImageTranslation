@@ -79,13 +79,13 @@ train_dsetHCP = CustomImageDataset(img_dir='/scratch1/zamzam/HCP_nt_train')
 train_dsetCamCan = CustomImageDataset(img_dir='/scratch1/akrami/CAMCAN_nt_train')
 
 train_dset = torch.utils.data.ConcatDataset([train_dsetHCP, train_dsetCamCan])
-train_loader = DataLoader(train_dset, batch_size=20,shuffle=True,num_workers=1)
+train_loader = DataLoader(train_dset, batch_size=10,shuffle=True,num_workers=1)
 
 val_dsetHCP = CustomImageDataset(img_dir='/scratch1/zamzam/HCP_nt_val')
 val_dsetCamCan = CustomImageDataset(img_dir='/scratch1/akrami/CAMCAN_nt_val')
 
 val_dset = torch.utils.data.ConcatDataset([val_dsetHCP, val_dsetCamCan])
-val_loader = DataLoader(val_dset, batch_size=20,shuffle=True,num_workers=1)
+val_loader = DataLoader(val_dset, batch_size=10,shuffle=True,num_workers=1)
 
 
 device = torch.device("cuda")
@@ -124,7 +124,8 @@ if pre_train:
 
 
 scaler = GradScaler()
-loss = torch.nn.MSELoss()
+loss_fn= torch.nn.MSELoss()
+running_mean = torch.tensor([], device=device)
 for epoch in range(n_epochs):
     model.train()
     epoch_loss = 0
@@ -152,8 +153,8 @@ for epoch in range(n_epochs):
             )  # we concatenate the brain MR image with the noisy segmenatation mask, to condition the generation process
             prediction = model(x=combined, timesteps=timesteps)
             # Get model prediction
-            L = loss(prediction.float(), noise.float())
-            running_mean = torch.cat((running_mean, torch.tensor([L.item()])))
+            L = loss_fn(prediction.float(), noise.float())
+            running_mean = torch.cat((running_mean, torch.tensor([L.item()],device=device)))
             
             if epoch==0:
                 loss = L+0
@@ -173,8 +174,9 @@ for epoch in range(n_epochs):
     if (epoch) % val_interval == 0:
         model.eval()
         val_epoch_loss = 0
+        torch.save(model.state_dict(), f'/scratch1/akrami/Projects/T1_T2/models/T1_T2{epoch+pre_epoch}_kr.pt')
         for step, data in enumerate(val_loader):
-            torch.save(model.state_dict(), f'/scratch1/akrami/Projects/T1_T2/models/T1_T2{epoch+pre_epoch}_kr.pt')
+            
             T1, T2, _, _ = data
             T1, T2 = T1.view(-1,1,T1.shape[2],T1.shape[3]), T2.view(-1,1,T2.shape[2],T2.shape[3]) 
             images, seg = T1.to(device), T2.to(device)

@@ -34,7 +34,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 class CustomImageDataset(Dataset):
-    def __init__(self, img_dir, sample_number = 1, transform=None):
+    def __init__(self, img_dir, sample_number = 4, transform=None):
         self.sample_number = sample_number
         self.img_dir = img_dir
         self.files = os.listdir(img_dir)
@@ -117,7 +117,7 @@ pre_epoch = 0
 
 if pre_train:
     pre_epoch = 154
-    model.load_state_dict(torch.load( f'/scratch1/akrami/Projects/T1_T2/models/T1_T2{pre_epoch}_b20.pt'))
+    model.load_state_dict(torch.load( f'/scratch1/akrami/Projects/T1_T2/models/T1_T2{pre_epoch}_b20_4s.pt'))
     print('loaded the pre train model')
 
 
@@ -133,7 +133,7 @@ for epoch in range(n_epochs):
     for step, data in enumerate(tqdm(train_loader,file=sys.stdout,position=0, leave=True)):
         
         T1, T2, _, _ = data
-        T1, T2 = T1.swapaxes(0,1), T2.swapaxes(0,1)
+        T1, T2 = T1.view(-1,1,T1.shape[2],T1.shape[3]), T2.view(-1,1,T2.shape[2],T2.shape[3]) 
         images, seg = T1.to(device), T2.to(device)
         
         #images = data["image"].to(device)
@@ -167,9 +167,9 @@ for epoch in range(n_epochs):
         model.eval()
         val_epoch_loss = 0
         for step, data in enumerate(tqdm(val_loader,file=sys.stdout,position=0, leave=True)):
-            torch.save(model.state_dict(), f'/scratch1/akrami/Projects/T1_T2/models/T1_T2{epoch+pre_epoch}_b20.pt')
+            torch.save(model.state_dict(), f'/scratch1/akrami/Projects/T1_T2/models/T1_T2{epoch+pre_epoch}_b20_4s.pt')
             T1, T2, _, _ = data
-            T1, T2 = T1.swapaxes(0,1), T2.swapaxes(0,1)
+            T1, T2 = T1.view(-1,1,T1.shape[2],T1.shape[3]), T2.view(-1,1,T2.shape[2],T2.shape[3]) 
             images, seg = T1.to(device), T2.to(device)
             timesteps = torch.randint(0, 1000, (len(images),)).to(device)
             with torch.no_grad():
@@ -187,7 +187,7 @@ for epoch in range(n_epochs):
 
 
 
-torch.save(model.state_dict(), f'/scratch1/akrami/Projects/T1_T2/models/T1_T2{epoch+pre_epoch}_b20.pt')
+torch.save(model.state_dict(), f'/scratch1/akrami/Projects/T1_T2/models/T1_T2{epoch+pre_epoch}_b20_4s.pt')
 total_time = time.time() - total_start
 print(f"train diffusion completed, total time: {total_time}.")
 plt.style.use("seaborn-bright")
@@ -206,4 +206,4 @@ plt.xlabel("Epochs", fontsize=16)
 plt.ylabel("Loss", fontsize=16)
 plt.legend(prop={"size": 14})
 plt.show()
-plt.savefig(f'./"result_translation/loss.png')
+plt.savefig(f'./"result_translation_b20_4s/loss.png')

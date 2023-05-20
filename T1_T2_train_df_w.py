@@ -108,19 +108,14 @@ train_dsetHCP = CustomImageDataset(img_dir='/scratch1/zamzam/HCP_nt_train', info
 train_dsetCamCan = CustomImageDataset(img_dir='/scratch1/akrami/CAMCAN_nt_train', info = CamCan_info)
 
 train_dset = torch.utils.data.ConcatDataset([train_dsetHCP, train_dsetCamCan])
-train_loader = DataLoader(train_dset, batch_size=20,shuffle=True,num_workers=1)
+train_loader = DataLoader(train_dset, batch_size=10,shuffle=True,num_workers=1)
 
 val_dsetHCP = CustomImageDataset(img_dir='/scratch1/zamzam/HCP_nt_val', info = HCP_info)
 val_dsetCamCan = CustomImageDataset(img_dir='/scratch1/akrami/CAMCAN_nt_val', info = CamCan_info)
 
 val_dset = torch.utils.data.ConcatDataset([val_dsetHCP, val_dsetCamCan])
-val_loader = DataLoader(val_dset, batch_size=20,shuffle=True,num_workers=1)
+val_loader = DataLoader(val_dset, batch_size=10,shuffle=True,num_workers=1)
 
-test_dsetHCP = CustomImageDataset(img_dir='/scratch1/zamzam/HCP_nt_test', info = HCP_info)
-test_dsetCamCan = CustomImageDataset(img_dir='/scratch1/akrami/CAMCAN_nt_test', info = CamCan_info)
-
-test_dset = torch.utils.data.ConcatDataset([test_dsetHCP, test_dsetCamCan])
-test_loader = DataLoader(test_dset, batch_size=20,shuffle=True,num_workers=1)
 
 trainHCP = os.listdir('/scratch1/zamzam/HCP_nt_train')
 for i in range(len(trainHCP)):
@@ -239,19 +234,12 @@ for epoch in range(n_epochs):
         
         
         T1, T2, s, _, d = data
+        T1, T2 = T1.view(-1,1,T1.shape[2],T1.shape[3]), T2.view(-1,1,T2.shape[2],T2.shape[3])
         images, seg = T1.to(device), T2.to(device)
         
 
         ratio = torch.tensor(ratios[d,torch.tensor(np.where(np.array(s) == 'F', 1, 0))]).to(device)
-        ratio = ratio.repeat_interleave(4)
-
-        output = generator(T1)
-
-       
-
-        
-        
-        
+        ratio = ratio.repeat_interleave(4)    
         #images = data["image"].to(device)
         #seg = data["label"].to(device)  # this is the ground truth segmentation
         #print('pass2')
@@ -282,9 +270,11 @@ for epoch in range(n_epochs):
     if (epoch) % val_interval == 0:
         model.eval()
         val_epoch_loss = 0
+        torch.save(model.state_dict(), f'/scratch1/akrami/Projects/T1_T2/models/diff/T1_T2{epoch+pre_epoch}_b20_w.pt')
         for step, data in enumerate(val_loader):
-            torch.save(model.state_dict(), f'/scratch1/akrami/Projects/T1_T2/models/diff/T1_T2{epoch+pre_epoch}_b20_w.pt')
+            
             T1, T2, s, _, d = data
+            T1, T2 = T1.view(-1,1,T1.shape[2],T1.shape[3]), T2.view(-1,1,T2.shape[2],T2.shape[3])
             images, seg = T1.to(device), T2.to(device)
             timesteps = torch.randint(0, 1000, (len(images),)).to(device)
             with torch.no_grad():
