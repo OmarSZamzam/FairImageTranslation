@@ -259,7 +259,7 @@ for epoch in range(1000):
 
         output = generator(T1)
 
-        initial = torch.mean(init_loss(output, T2), dim = (1, 2, 3))
+        mse = torch.mean(init_loss(output, T2), dim = (1, 2, 3))
         
         # Adversarial loss
         valid = torch.ones(output.size(0), 1).to(device)
@@ -279,12 +279,12 @@ for epoch in range(1000):
         losses[2] = torch.nan_to_num(torch.mean(g_loss[(np.array(s)=='M') & (np.array(d)==0)]), nan=100)
         losses[3] = torch.nan_to_num(torch.mean(g_loss[(np.array(s)=='F') & (np.array(d)==0)]), nan=100)
         
-        mse = torch.mean(g_loss) + torch.mean((losses - torch.min(losses))[losses!=100])
+        T = torch.mean(g_loss) + torch.mean((losses - torch.min(losses))[losses!=100])
 
-        g_loss.backward()
+        T.backward()
         generator_optimizer.step()
 
-        total_loss += mse
+        total_loss += T
 
         # Training the discriminator
         discriminator_optimizer.zero_grad()
@@ -300,20 +300,21 @@ for epoch in range(1000):
     print('  * train  ' +
           f'Loss: {total_loss/len(train_dset):.7f}, ')
 
-    total_loss = 0
+    if epoch%2==0:
+        total_loss = 0
 
-    for i, data in enumerate(tqdm(val_loader)):
-        with torch.no_grad():
-            T1, T2, _, _ = data
-            #T1, T2 = T1.swapaxes(0,1), T2.swapaxes(0,1)
-            T1, T2 = T1.view(-1,1,T1.shape[2],T1.shape[3]), T2.view(-1,1,T2.shape[2],T2.shape[3]) 
-            T1, T2 = T1.to(device), T2.to(device)
+        for i, data in enumerate(tqdm(val_loader)):
+            with torch.no_grad():
+                T1, T2, _, _, _ = data
+                #T1, T2 = T1.swapaxes(0,1), T2.swapaxes(0,1)
+                T1, T2 = T1.view(-1,1,T1.shape[2],T1.shape[3]), T2.view(-1,1,T2.shape[2],T2.shape[3]) 
+                T1, T2 = T1.to(device), T2.to(device)
 
-            output = generator(T1)
+                output = generator(T1)
 
-            mse = loss(output, T2)
+                mse = loss(output, T2)
 
-            total_loss += mse
+                total_loss += mse
 
     torch.save(generator.state_dict(), '/home1/zamzam/Fairness/modelsGANDifference/model{}.pth'.format(epoch))
 

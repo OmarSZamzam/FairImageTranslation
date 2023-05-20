@@ -104,7 +104,7 @@ for epoch in range(1000):
         
         L = loss(output, T2)
 
-        running_mean = torch.cat((running_mean, torch.tensor([L.item()])))
+        running_mean = torch.cat((running_mean, torch.tensor([L.item()],device=device))) 
 
         if epoch==0:
             mse = L
