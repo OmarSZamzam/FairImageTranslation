@@ -18,7 +18,8 @@ from torch.cuda.amp import GradScaler, autocast
 from tqdm import tqdm
 import torch.nn.functional as F
 import sys
-
+import csv
+import pandas as pd
 
 with tqdm(total=100, dynamic_ncols=False) as pbar:
     for i in range(100):
@@ -33,6 +34,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 
+threshhold = 10
 with open('/scratch1/zamzam/HCP_1200.csv', 'r') as file:
     reader = csv.reader(file)
     next(reader)  # skip the header row
@@ -46,7 +48,7 @@ print(np.shape(HCP_info))
 print(np.shape(CamCan_info))
 
 class CustomImageDataset(Dataset):
-    def __init__(self, img_dir, info, sample_number = 1, transform=None):
+    def __init__(self, img_dir, info, sample_number = 4, transform=None):
         self.sample_number = sample_number
         self.img_dir = img_dir
         self.files = os.listdir(img_dir)
@@ -54,14 +56,15 @@ class CustomImageDataset(Dataset):
         
         self.files = np.array(self.files).reshape(-1, 1)
         self.files = np.hstack((self.files,  np.array(['A'] * len(self.files)).reshape(-1, 1)))
+        
+        self.dset = int('CC' in self.files[0,0])
 
         for i in range(len(self.files)):
             for j in range(len(info)):
-                if self.files[i,0] == info[j,0]:
+                if self.files[i,0][0+6*self.dset:-3] == info[j,0]:
                     self.files[i,1] = info[j,2]
                     break
-                    
-        self.dset = 'CC' in self.files[0,0]
+
         
 
     def __len__(self):
@@ -97,7 +100,97 @@ class CustomImageDataset(Dataset):
         
         T1, T2 = torch.from_numpy(T1), torch.from_numpy(T2)
         
-        return T1, T2, self.files[idx,1], self.files[idx,0], int(self.dset)
+        return T1, T2, self.files[idx,1], self.files[idx,0], self.dset
+    
+
+
+train_dsetHCP = CustomImageDataset(img_dir='/scratch1/zamzam/HCP_nt_train', info = HCP_info)
+train_dsetCamCan = CustomImageDataset(img_dir='/scratch1/akrami/CAMCAN_nt_train', info = CamCan_info)
+
+train_dset = torch.utils.data.ConcatDataset([train_dsetHCP, train_dsetCamCan])
+train_loader = DataLoader(train_dset, batch_size=20,shuffle=True,num_workers=1)
+
+val_dsetHCP = CustomImageDataset(img_dir='/scratch1/zamzam/HCP_nt_val', info = HCP_info)
+val_dsetCamCan = CustomImageDataset(img_dir='/scratch1/akrami/CAMCAN_nt_val', info = CamCan_info)
+
+val_dset = torch.utils.data.ConcatDataset([val_dsetHCP, val_dsetCamCan])
+val_loader = DataLoader(val_dset, batch_size=20,shuffle=True,num_workers=1)
+
+test_dsetHCP = CustomImageDataset(img_dir='/scratch1/zamzam/HCP_nt_test', info = HCP_info)
+test_dsetCamCan = CustomImageDataset(img_dir='/scratch1/akrami/CAMCAN_nt_test', info = CamCan_info)
+
+test_dset = torch.utils.data.ConcatDataset([test_dsetHCP, test_dsetCamCan])
+test_loader = DataLoader(test_dset, batch_size=20,shuffle=True,num_workers=1)
+
+trainHCP = os.listdir('/scratch1/zamzam/HCP_nt_train')
+for i in range(len(trainHCP)):
+    trainHCP[i] = trainHCP[i][:-3]
+trainCamCan = os.listdir('/scratch1/akrami/CAMCAN_nt_train')
+for i in range(len(trainCamCan)):
+    trainCamCan[i] = trainCamCan[i][6:-3]
+    
+trainHCP = np.array(trainHCP).reshape(-1, 1)
+trainHCP = np.hstack((trainHCP, np.array(['A'] * len(trainHCP)).reshape(-1, 1)))
+
+trainCamCan = np.array(trainCamCan).reshape(-1, 1)
+trainCamCan = np.hstack((trainCamCan,  np.array(['A'] * len(trainCamCan)).reshape(-1, 1)))
+
+for i in range(len(trainHCP)):
+    for j in range(len(HCP_info)):
+        if trainHCP[i,0] == HCP_info[j,0]:
+            trainHCP[i,1] = HCP_info[j,2]
+            break
+for i in range(len(trainCamCan)):
+    for j in range(len(CamCan_info)):
+        if trainCamCan[i,0][:] == CamCan_info[j,0]:
+            trainCamCan[i,1] = CamCan_info[j,2]
+            break
+            
+
+trainHCP = os.listdir('/scratch1/zamzam/HCP_nt_train')
+for i in range(len(trainHCP)):
+    trainHCP[i] = trainHCP[i][:-3]
+trainCamCan = os.listdir('/scratch1/akrami/CAMCAN_nt_train')
+for i in range(len(trainCamCan)):
+    trainCamCan[i] = trainCamCan[i][6:-3]
+    
+trainHCP = np.array(trainHCP).reshape(-1, 1)
+trainHCP = np.hstack((trainHCP, np.array(['A'] * len(trainHCP)).reshape(-1, 1)))
+
+trainCamCan = np.array(trainCamCan).reshape(-1, 1)
+trainCamCan = np.hstack((trainCamCan,  np.array(['A'] * len(trainCamCan)).reshape(-1, 1)))
+
+for i in range(len(trainHCP)):
+    for j in range(len(HCP_info)):
+        if trainHCP[i,0] == HCP_info[j,0]:
+            trainHCP[i,1] = HCP_info[j,2]
+            break
+for i in range(len(trainCamCan)):
+    for j in range(len(CamCan_info)):
+        if trainCamCan[i,0][:] == CamCan_info[j,0]:
+            trainCamCan[i,1] = CamCan_info[j,2]
+            break
+            
+
+confusion_matrix = [[0,0],[0,0]]
+confusion_matrix = np.array(confusion_matrix)
+for i in range(len(trainHCP)):
+    if trainHCP[i,1]=='M':
+        confusion_matrix[0,0]+=1
+    if trainHCP[i,1]=='F':
+        confusion_matrix[0,1]+=1
+        
+for i in range(len(trainCamCan)):
+    if trainCamCan[i,1]=='M':
+        confusion_matrix[1,0]+=1
+    if trainCamCan[i,1]=='F':
+        confusion_matrix[1,1]+=1
+        
+
+ratios = np.sum(confusion_matrix)/confusion_matrix
+ratios = ratios/np.sum(ratios)
+print(confusion_matrix)
+print(ratios)
 
 
 model = DiffusionModelUNet(
@@ -128,20 +221,20 @@ pre_epoch = 0
 
 if pre_train:
     pre_epoch = 154
-    model.load_state_dict(torch.load( f'/scratch1/akrami/Projects/T1_T2/models/T1_T2{pre_epoch}_b20.pt'))
+    model.load_state_dict(torch.load( f'/scratch1/akrami/Projects/T1_T2/models/T1_T2{pre_epoch}_b20_w.pt'))
     print('loaded the pre train model')
 
 
 
 
 scaler = GradScaler()
-
+init_loss = torch.nn.MSELoss(reduction = 'none')
 
 for epoch in range(n_epochs):
     model.train()
     epoch_loss = 0
    # print('pass1')
-    for step, data in enumerate(tqdm(train_loader,file=sys.stdout,position=0, leave=True)):
+    for step, data in enumerate(train_loader):
         
         
         
@@ -149,8 +242,13 @@ for epoch in range(n_epochs):
         images, seg = T1.to(device), T2.to(device)
         
 
-        ratio = ratios[d[0],int(s[0]=='F')]
-        mse = loss(output, T2) * ratio
+        ratio = torch.tensor(ratios[d,torch.tensor(np.where(np.array(s) == 'F', 1, 0))]).to(device)
+        ratio = ratio.repeat_interleave(4)
+
+        output = generator(T1)
+
+       
+
         
         
         
@@ -171,7 +269,7 @@ for epoch in range(n_epochs):
             )  # we concatenate the brain MR image with the noisy segmenatation mask, to condition the generation process
             prediction = model(x=combined, timesteps=timesteps)
             # Get model prediction
-            loss = F.mse_loss(prediction.float(), noise.float())
+            loss = torch.mean(torch.mean(init_loss(prediction.float(), noise.float()), dim = (1,2,3))*ratio)
         scaler.scale(loss).backward()
         scaler.step(optimizer)
         scaler.update()
@@ -184,8 +282,8 @@ for epoch in range(n_epochs):
     if (epoch) % val_interval == 0:
         model.eval()
         val_epoch_loss = 0
-        for step, data in enumerate(tqdm(val_loader,file=sys.stdout,position=0, leave=True)):
-            torch.save(model.state_dict(), f'/scratch1/akrami/Projects/T1_T2/models/T1_T2{epoch+pre_epoch}_b20.pt')
+        for step, data in enumerate(val_loader):
+            torch.save(model.state_dict(), f'/scratch1/akrami/Projects/T1_T2/models/diff/T1_T2{epoch+pre_epoch}_b20_w.pt')
             T1, T2, s, _, d = data
             images, seg = T1.to(device), T2.to(device)
             timesteps = torch.randint(0, 1000, (len(images),)).to(device)
@@ -201,10 +299,11 @@ for epoch in range(n_epochs):
         print('  * val  ' +
           f'Loss: {val_epoch_loss/len(val_loader):.7f}, ')
         val_epoch_loss_list.append(val_epoch_loss / (step + 1))
+        print(f'epoch{epoch}')
 
 
 
-torch.save(model.state_dict(), f'/scratch1/akrami/Projects/T1_T2/models/T1_T2{epoch+pre_epoch}_b20.pt')
+torch.save(model.state_dict(), f'/scratch1/akrami/Projects/T1_T2/models/diff/T1_T2{epoch+pre_epoch}_b20_w.pt')
 total_time = time.time() - total_start
 print(f"train diffusion completed, total time: {total_time}.")
 plt.style.use("seaborn-bright")
@@ -223,4 +322,4 @@ plt.xlabel("Epochs", fontsize=16)
 plt.ylabel("Loss", fontsize=16)
 plt.legend(prop={"size": 14})
 plt.show()
-plt.savefig(f'./"result_translation/loss.png')
+plt.savefig(f'./"result_translation/loss_dif_w.png')

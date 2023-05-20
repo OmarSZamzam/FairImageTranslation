@@ -33,7 +33,6 @@ torch.manual_seed(manualSeed)
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
-
 with open('/scratch1/zamzam/HCP_1200.csv', 'r') as file:
     reader = csv.reader(file)
     next(reader)  # skip the header row
@@ -47,7 +46,7 @@ print(np.shape(HCP_info))
 print(np.shape(CamCan_info))
 
 class CustomImageDataset(Dataset):
-    def __init__(self, img_dir, info, sample_number = 1, transform=None):
+    def __init__(self, img_dir, info, sample_number = 4, transform=None):
         self.sample_number = sample_number
         self.img_dir = img_dir
         self.files = os.listdir(img_dir)
@@ -55,14 +54,15 @@ class CustomImageDataset(Dataset):
         
         self.files = np.array(self.files).reshape(-1, 1)
         self.files = np.hstack((self.files,  np.array(['A'] * len(self.files)).reshape(-1, 1)))
+        
+        self.dset = int('CC' in self.files[0,0])
 
         for i in range(len(self.files)):
             for j in range(len(info)):
-                if self.files[i,0] == info[j,0]:
+                if self.files[i,0][0+6*self.dset:-3] == info[j,0]:
                     self.files[i,1] = info[j,2]
                     break
-                    
-        self.dset = 'CC' in self.files[0,0]
+
         
 
     def __len__(self):
@@ -98,7 +98,7 @@ class CustomImageDataset(Dataset):
         
         T1, T2 = torch.from_numpy(T1), torch.from_numpy(T2)
         
-        return T1, T2, self.files[idx,1], self.files[idx,0], int(self.dset)
+        return T1, T2, self.files[idx,1], self.files[idx,0], self.dset
     
 
 
@@ -117,13 +117,82 @@ val_loader = DataLoader(val_dset, batch_size=20,shuffle=True,num_workers=1)
 test_dsetHCP = CustomImageDataset(img_dir='/scratch1/zamzam/HCP_nt_test', info = HCP_info)
 test_dsetCamCan = CustomImageDataset(img_dir='/scratch1/akrami/CAMCAN_nt_test', info = CamCan_info)
 
+test_dset = torch.utils.data.ConcatDataset([test_dsetHCP, test_dsetCamCan])
+test_loader = DataLoader(test_dset, batch_size=20,shuffle=True,num_workers=1)
 
+test_loaderHCP = DataLoader(test_dsetHCP, batch_size=20,shuffle=True,num_workers=1)
+test_loaderCamCan = DataLoader(test_dsetCamCan, batch_size=20,shuffle=True,num_workers=1)
+
+trainHCP = os.listdir('/scratch1/zamzam/HCP_nt_train')
+for i in range(len(trainHCP)):
+    trainHCP[i] = trainHCP[i][:-3]
+trainCamCan = os.listdir('/scratch1/akrami/CAMCAN_nt_train')
+for i in range(len(trainCamCan)):
+    trainCamCan[i] = trainCamCan[i][6:-3]
     
+trainHCP = np.array(trainHCP).reshape(-1, 1)
+trainHCP = np.hstack((trainHCP, np.array(['A'] * len(trainHCP)).reshape(-1, 1)))
+
+trainCamCan = np.array(trainCamCan).reshape(-1, 1)
+trainCamCan = np.hstack((trainCamCan,  np.array(['A'] * len(trainCamCan)).reshape(-1, 1)))
+
+for i in range(len(trainHCP)):
+    for j in range(len(HCP_info)):
+        if trainHCP[i,0] == HCP_info[j,0]:
+            trainHCP[i,1] = HCP_info[j,2]
+            break
+for i in range(len(trainCamCan)):
+    for j in range(len(CamCan_info)):
+        if trainCamCan[i,0][:] == CamCan_info[j,0]:
+            trainCamCan[i,1] = CamCan_info[j,2]
+            break
+            
+
+trainHCP = os.listdir('/scratch1/zamzam/HCP_nt_train')
+for i in range(len(trainHCP)):
+    trainHCP[i] = trainHCP[i][:-3]
+trainCamCan = os.listdir('/scratch1/akrami/CAMCAN_nt_train')
+for i in range(len(trainCamCan)):
+    trainCamCan[i] = trainCamCan[i][6:-3]
     
+trainHCP = np.array(trainHCP).reshape(-1, 1)
+trainHCP = np.hstack((trainHCP, np.array(['A'] * len(trainHCP)).reshape(-1, 1)))
 
+trainCamCan = np.array(trainCamCan).reshape(-1, 1)
+trainCamCan = np.hstack((trainCamCan,  np.array(['A'] * len(trainCamCan)).reshape(-1, 1)))
 
+for i in range(len(trainHCP)):
+    for j in range(len(HCP_info)):
+        if trainHCP[i,0] == HCP_info[j,0]:
+            trainHCP[i,1] = HCP_info[j,2]
+            break
+for i in range(len(trainCamCan)):
+    for j in range(len(CamCan_info)):
+        if trainCamCan[i,0][:] == CamCan_info[j,0]:
+            trainCamCan[i,1] = CamCan_info[j,2]
+            break
+            
 
-device = torch.device("cuda")
+confusion_matrix = [[0,0],[0,0]]
+confusion_matrix = np.array(confusion_matrix)
+for i in range(len(trainHCP)):
+    if trainHCP[i,1]=='M':
+        confusion_matrix[0,0]+=1
+    if trainHCP[i,1]=='F':
+        confusion_matrix[0,1]+=1
+        
+for i in range(len(trainCamCan)):
+    if trainCamCan[i,1]=='M':
+        confusion_matrix[1,0]+=1
+    if trainCamCan[i,1]=='F':
+        confusion_matrix[1,1]+=1
+        
+
+ratios = np.sum(confusion_matrix)/confusion_matrix
+ratios = ratios/np.sum(ratios)
+print(confusion_matrix)
+print(ratios)
+
 model = DiffusionModelUNet(
     spatial_dims=2,
     in_channels=2,
@@ -152,7 +221,7 @@ pre_epoch = 0
 
 if pre_train:
     pre_epoch = 154
-    model.load_state_dict(torch.load( f'/scratch1/akrami/Projects/T1_T2/models/T1_T2{pre_epoch}_b20_diff.pt'))
+    model.load_state_dict(torch.load( f'/scratch1/akrami/Projects/T1_T2/models/T1_T2{pre_epoch}_b20_diff_s4.pt'))
     print('loaded the pre train model')
 
 
@@ -165,11 +234,12 @@ for epoch in range(n_epochs):
     model.train()
     epoch_loss = 0
    # print('pass1')
-    for step, data in enumerate(tqdm(train_loader,file=sys.stdout,position=0, leave=True)):
+    for step, data in enumerate(train_loader):
         
         T1, T2, s, _, d = data
-        #T1, T2 = T1.swapaxes(0,1), T2.swapaxes(0,1)
+        T1, T2 = T1.view(-1,1,T1.shape[2],T1.shape[3]), T2.view(-1,1,T2.shape[2],T2.shape[3]) 
         images, seg = T1.to(device), T2.to(device)
+        s,d = np.repeat(np.array(s), 4), np.repeat(np.array(d), 4)
         
         
         #images = data["image"].to(device)
@@ -193,12 +263,12 @@ for epoch in range(n_epochs):
             initial = torch.mean(init_loss(prediction.float(), noise.float()), dim = (1, 2, 3))
             losses = torch.zeros((4))
         
-            losses[0] = torch.mean(initial[(np.array(s)=='M') & (np.array(d)==1)])
-            losses[1] = torch.mean(initial[(np.array(s)=='F') & (np.array(d)==1)])
-            losses[2] = torch.mean(initial[(np.array(s)=='M') & (np.array(d)==0)])
-            losses[3] = torch.mean(initial[(np.array(s)=='F') & (np.array(d)==0)])
-        
-            mse = torch.mean(initial) + torch.sum(losses - torch.min(losses))
+            losses[0] = torch.nan_to_num(torch.mean(initial[(np.array(s)=='M') & (np.array(d)==1)]), nan=100) #100 is a big number to avoid nan
+            losses[1] = torch.nan_to_num(torch.mean(initial[(np.array(s)=='F') & (np.array(d)==1)]), nan=100)
+            losses[2] = torch.nan_to_num(torch.mean(initial[(np.array(s)=='M') & (np.array(d)==0)]), nan=100)
+            losses[3] = torch.nan_to_num(torch.mean(initial[(np.array(s)=='F') & (np.array(d)==0)]), nan=100)
+
+            mse = torch.mean(initial) + torch.mean((losses - torch.min(losses))[losses!=100])
             #loss = F.mse_loss(prediction.float(), noise.float())
         scaler.scale(mse).backward()
         scaler.step(optimizer)
@@ -212,10 +282,11 @@ for epoch in range(n_epochs):
     if (epoch) % val_interval == 0:
         model.eval()
         val_epoch_loss = 0
-        for step, data in enumerate(tqdm(val_loader,file=sys.stdout,position=0, leave=True)):
-            torch.save(model.state_dict(), f'/scratch1/akrami/Projects/T1_T2/models/T1_T2{epoch+pre_epoch}_b20.pt')
+        torch.save(model.state_dict(), f'/scratch1/akrami/Projects/T1_T2/models/T1_T2{epoch+pre_epoch}_b20_diff_s4.pt')
+        for step, data in enumerate(val_loader):
+            
             T1, T2, s, _, d = data
-            #T1, T2 = T1.swapaxes(0,1), T2.swapaxes(0,1)
+            T1, T2 = T1.view(-1,1,T1.shape[2],T1.shape[3]), T2.view(-1,1,T2.shape[2],T2.shape[3]) 
             images, seg = T1.to(device), T2.to(device)
             timesteps = torch.randint(0, 1000, (len(images),)).to(device)
             with torch.no_grad():
@@ -224,24 +295,19 @@ for epoch in range(n_epochs):
                     noisy_seg = scheduler.add_noise(original_samples=seg, noise=noise, timesteps=timesteps)
                     combined = torch.cat((images, noisy_seg), dim=1)
                     prediction = model(x=combined, timesteps=timesteps)
+                    val_loss = F.mse_loss(prediction.float(), noise.float())
                     
-                    initial = torch.mean(init_loss(prediction.float(), noise.float()), dim = (1, 2, 3))
-                    losses = torch.zeros((4))
-
-                    losses[0] = torch.mean(initial[(np.array(s)=='M') & (np.array(d)==1)])
-                    losses[1] = torch.mean(initial[(np.array(s)=='F') & (np.array(d)==1)])
-                    losses[2] = torch.mean(initial[(np.array(s)=='M') & (np.array(d)==0)])
-                    losses[3] = torch.mean(initial[(np.array(s)=='F') & (np.array(d)==0)])
-                    val_loss = torch.mean(initial) + torch.sum(losses - torch.min(losses))
+                    
             val_epoch_loss += val_loss.item()
         #print("Epoch", epoch, "Validation loss", val_epoch_loss / (step + 1))
         print('  * val  ' +
           f'Loss: {val_epoch_loss/len(val_loader):.7f}, ')
         val_epoch_loss_list.append(val_epoch_loss / (step + 1))
+        print(f'epoch{epoch})
 
 
 
-torch.save(model.state_dict(), f'/scratch1/akrami/Projects/T1_T2/models/T1_T2{epoch+pre_epoch}_b20_diff.pt')
+torch.save(model.state_dict(), f'/scratch1/akrami/Projects/T1_T2/models/T1_T2{epoch+pre_epoch}_b20_diff_s4.pt')
 total_time = time.time() - total_start
 print(f"train diffusion completed, total time: {total_time}.")
 plt.style.use("seaborn-bright")
@@ -260,4 +326,4 @@ plt.xlabel("Epochs", fontsize=16)
 plt.ylabel("Loss", fontsize=16)
 plt.legend(prop={"size": 14})
 plt.show()
-plt.savefig(f'./"result_translation/loss_differ.png')
+plt.savefig(f'./"result_translation/loss_differ_diff_s4.png')

@@ -209,7 +209,7 @@ for epoch in range(1000):
     print('  * val  ' +
           f'Loss: {total_loss/len(val_dset):.7f}, ')
     
-    print(f'epoch{epoch})
+    print(f'epoch{epoch}')
     
     
     

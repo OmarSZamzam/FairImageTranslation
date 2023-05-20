@@ -164,6 +164,6 @@ for epoch in range(1000):
 
         print('  * val  ' +
         f'Loss: {total_loss/len(val_dset):.7f}, ')
-    print(f'epoch{epoch})
+    print(f'epoch{epoch}')
 
     torch.save(model.state_dict(), f'/scratch1/akrami/Projects/T1_T2/models/Unet/T1_T2{epoch}_unet_var_s4.pt')
