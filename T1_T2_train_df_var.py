@@ -108,15 +108,15 @@ optimizer = torch.optim.Adam(params=model.parameters(), lr=2.5e-5)
 inferer = DiffusionInferer(scheduler)
 
 
-n_epochs = 50 #4000
+n_epochs = 200 #4000
 val_interval = 2 #50
 epoch_loss_list = []
 val_epoch_loss_list = []
-pre_train =False
+pre_train =True
 pre_epoch = 0
 
 if pre_train:
-    pre_epoch = 154
+    pre_epoch = 48
     model.load_state_dict(torch.load( f'/scratch1/akrami/Projects/T1_T2/models/T1_T2{pre_epoch}_b20_var_s4.pt'))
     print('loaded the pre train model')
 
@@ -190,7 +190,6 @@ for epoch in range(n_epochs):
 
 
 torch.save(model.state_dict(), f'/scratch1/akrami/Projects/T1_T2/models/T1_T2{epoch+pre_epoch}_b20_var_s4.pt')
-total_time = time.time() - total_start
 print(f"train diffusion completed, total time: {total_time}.")
 plt.style.use("seaborn-bright")
 plt.title("Learning Curves Diffusion Model", fontsize=20)
