@@ -110,9 +110,9 @@ for epoch in range(1000):
         T1, T2 = T1.view(-1,1,T1.shape[2],T1.shape[3]), T2.view(-1,1,T2.shape[2],T2.shape[3]) 
         T1, T2 = T1.to(device), T2.to(device)
         
-        output = model(T1)
+        output = torch.sigmoid(model(T1))
         
-        mse = Gaussian_CE_loss(T2, output, -0.01, sigma=SIGMA)
+        mse = Gaussian_CE_loss(T2, output, -10, sigma=SIGMA)
         
         mse.backward()
         
@@ -134,7 +134,7 @@ for epoch in range(1000):
                 T1, T2 = T1.view(-1,1,T1.shape[2],T1.shape[3]), T2.view(-1,1,T2.shape[2],T2.shape[3]) 
                 T1, T2 = T1.to(device), T2.to(device)
 
-                output = model(T1)
+                output = torch.sigmoid(model(T1))
 
                 mse = loss(output, T2)
                 
@@ -143,4 +143,4 @@ for epoch in range(1000):
         print('  * val  ' +
         f'Loss: {total_loss/len(val_dset):.7f}, ')
 
-    torch.save(model.state_dict(), '/home1/zamzam/Fairness/modelsBeta/model_001_{}.pth'.format(epoch))
+    torch.save(model.state_dict(), '/home1/zamzam/Fairness/modelsBeta/model_10_{}.pth'.format(epoch))
