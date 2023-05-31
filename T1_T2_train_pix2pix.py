@@ -166,9 +166,9 @@ for epoch in range(1000):
         gen_loss = adversarial_loss(discriminator(output), valid)
         
         if epoch >threshhold:
-            g_loss =100* mse + gen_loss
+            g_loss =mse + 0.01 *gen_loss
         else:
-            g_loss = 100*mse
+            g_loss = mse
 
         g_loss.backward()
         generator_optimizer.step()
@@ -192,7 +192,7 @@ for epoch in range(1000):
     total_loss = 0
 
     for i, data in enumerate(tqdm.tqdm(val_loader)):
-        torch.save(generator.state_dict(), f'/scratch1/akrami/Projects/T1_T2/models/pix2pix/T1_T2{epoch}.pt')
+        torch.save(generator.state_dict(), f'/scratch1/akrami/Projects/T1_T2/models/pix2pix/T1_T2{epoch}_v3.pt')
         with torch.no_grad():
             T1, T2, _, _ = data
             T1, T2 = T1.view(-1,1,T1.shape[2],T1.shape[3]), T2.view(-1,1,T2.shape[2],T2.shape[3]) 

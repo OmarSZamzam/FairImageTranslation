@@ -108,7 +108,7 @@ optimizer = torch.optim.Adam(params=model.parameters(), lr=2.5e-5)
 inferer = DiffusionInferer(scheduler)
 
 
-n_epochs = 50 #4000
+n_epochs = 250 #4000
 val_interval = 2 #50
 epoch_loss_list = []
 val_epoch_loss_list = []
@@ -117,7 +117,7 @@ pre_epoch = 0
 
 if pre_train:
     pre_epoch = 154
-    model.load_state_dict(torch.load( f'/scratch1/akrami/Projects/T1_T2/models/T1_T2{pre_epoch}_kr.pt'))
+    model.load_state_dict(torch.load( f'/scratch1/akrami/Projects/T1_T2/diff/models/T1_T2{pre_epoch}_kr_sig_cr.pt'))
     print('loaded the pre train model')
 
 
@@ -151,7 +151,7 @@ for epoch in range(n_epochs):
             combined = torch.cat(
                 (images, noisy_seg), dim=1
             )  # we concatenate the brain MR image with the noisy segmenatation mask, to condition the generation process
-            prediction = model(x=combined, timesteps=timesteps)
+            prediction = (torch.sigmoid(model(x=combined, timesteps=timesteps))-0.5)*5
             # Get model prediction
             L = loss_fn(prediction.float(), noise.float())
             running_mean = torch.cat((running_mean, torch.tensor([L.item()],device=device)))
@@ -166,15 +166,14 @@ for epoch in range(n_epochs):
         scaler.step(optimizer)
         scaler.update()
         epoch_loss += loss.item()
-          
-        print('  * train  ' +
+    print('  * train  ' +
           f'Loss: {epoch_loss/len(train_loader):.7f}, ')
 
     epoch_loss_list.append(epoch_loss / (step + 1))
     if (epoch) % val_interval == 0:
         model.eval()
         val_epoch_loss = 0
-        torch.save(model.state_dict(), f'/scratch1/akrami/Projects/T1_T2/models/T1_T2{epoch+pre_epoch}_kr.pt')
+        torch.save(model.state_dict(), f'/scratch1/akrami/Projects/T1_T2/models/diff/T1_T2{epoch+pre_epoch}_kr_sig_cr.pt')
         for step, data in enumerate(val_loader):
             
             T1, T2, _, _ = data
@@ -186,7 +185,7 @@ for epoch in range(n_epochs):
                     noise = torch.randn_like(seg).to(device)
                     noisy_seg = scheduler.add_noise(original_samples=seg, noise=noise, timesteps=timesteps)
                     combined = torch.cat((images, noisy_seg), dim=1)
-                    prediction = model(x=combined, timesteps=timesteps)
+                    prediction = (torch.sigmoid(model(x=combined, timesteps=timesteps))-0.5)*5
                     val_loss = F.mse_loss(prediction.float(), noise.float())
             val_epoch_loss += val_loss.item()
         #print("Epoch", epoch, "Validation loss", val_epoch_loss / (step + 1))
@@ -196,7 +195,7 @@ for epoch in range(n_epochs):
 
 
 
-torch.save(model.state_dict(), f'/scratch1/akrami/Projects/T1_T2/models/T1_T2{epoch+pre_epoch}_kr.pt')
+torch.save(model.state_dict(), f'/scratch1/akrami/Projects/T1_T2/models/diff/T1_T2{epoch+pre_epoch}_kr_sig_cr.pt')
 total_time = time.time() - total_start
 print(f"train diffusion completed, total time: {total_time}.")
 plt.style.use("seaborn-bright")
@@ -215,4 +214,4 @@ plt.xlabel("Epochs", fontsize=16)
 plt.ylabel("Loss", fontsize=16)
 plt.legend(prop={"size": 14})
 plt.show()
-plt.savefig(f'./"result_translation/loss_kr.png')
+plt.savefig(f'./"result_translation/loss_kr_sig_cr.png')

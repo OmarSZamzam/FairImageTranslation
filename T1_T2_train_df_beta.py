@@ -31,7 +31,7 @@ manualSeed = 999
 random.seed(manualSeed)
 torch.manual_seed(manualSeed)
 SIGMA = 1
-BETA= 100
+BETA= 10
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -164,7 +164,8 @@ for epoch in range(n_epochs):
             combined = torch.cat(
                 (images, noisy_seg), dim=1
             )  # we concatenate the brain MR image with the noisy segmenatation mask, to condition the generation process
-            prediction = model(x=combined, timesteps=timesteps)
+            prediction = torch.sigmoid(model(x=combined, timesteps=timesteps))
+            #prediction  = torch.sigmoid(model(T1))
             # Get model prediction
             loss = Gaussian_CE_loss(noise.float(), prediction.float(), BETA, sigma=SIGMA)
             #loss = Gaussian_CE_loss(prediction.float(), noise.float())
@@ -192,7 +193,7 @@ for epoch in range(n_epochs):
                     noise = torch.randn_like(seg).to(device)
                     noisy_seg = scheduler.add_noise(original_samples=seg, noise=noise, timesteps=timesteps)
                     combined = torch.cat((images, noisy_seg), dim=1)
-                    prediction = model(x=combined, timesteps=timesteps)
+                    prediction = torch.sigmoid(model(x=combined, timesteps=timesteps))
                     val_loss = F.mse_loss(prediction.float(), noise.float())
             val_epoch_loss += val_loss.item()
         #print("Epoch", epoch, "Validation loss", val_epoch_loss / (step + 1))

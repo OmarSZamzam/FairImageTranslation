@@ -79,13 +79,13 @@ train_dsetHCP = CustomImageDataset(img_dir='/scratch1/zamzam/HCP_nt_train')
 train_dsetCamCan = CustomImageDataset(img_dir='/scratch1/akrami/CAMCAN_nt_train')
 
 train_dset = torch.utils.data.ConcatDataset([train_dsetHCP, train_dsetCamCan])
-train_loader = DataLoader(train_dset, batch_size=20,shuffle=True,num_workers=1)
+train_loader = DataLoader(train_dset, batch_size=10,shuffle=True,num_workers=1)
 
 val_dsetHCP = CustomImageDataset(img_dir='/scratch1/zamzam/HCP_nt_val')
 val_dsetCamCan = CustomImageDataset(img_dir='/scratch1/akrami/CAMCAN_nt_val')
 
 val_dset = torch.utils.data.ConcatDataset([val_dsetHCP, val_dsetCamCan])
-val_loader = DataLoader(val_dset, batch_size=20,shuffle=True,num_workers=1)
+val_loader = DataLoader(val_dset, batch_size=10,shuffle=True,num_workers=1)
 
 
 device = torch.device("cuda")

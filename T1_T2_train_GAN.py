@@ -20,7 +20,7 @@ import torch.optim as optim
 
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-threshhold = 10
+threshhold = 20
 class CustomImageDataset(Dataset):
     def __init__(self, img_dir, sample_number = 4, transform=None):
         self.sample_number = sample_number
@@ -164,7 +164,7 @@ for epoch in range(1000):
         gen_loss = adversarial_loss(discriminator(output), valid)
         
         if epoch >threshhold:
-            g_loss = mse + gen_loss
+            g_loss = 10000*mse + gen_loss
         else:
             g_loss = mse
 
@@ -190,7 +190,7 @@ for epoch in range(1000):
     total_loss = 0
 
     for i, data in enumerate(tqdm.tqdm(val_loader)):
-        torch.save(generator.state_dict(), f'/scratch1/akrami/Projects/T1_T2/models/GAN/T1_T2{epoch}_b20_w_s4.pt')
+        torch.save(generator.state_dict(), f'/scratch1/akrami/Projects/T1_T2/models/GAN/T1_T2{epoch}_b20_pGAN.pt')
         with torch.no_grad():
             T1, T2, _, _ = data
             T1, T2 = T1.view(-1,1,T1.shape[2],T1.shape[3]), T2.view(-1,1,T2.shape[2],T2.shape[3]) 
