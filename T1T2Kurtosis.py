@@ -69,7 +69,7 @@ val_dsetHCP = CustomImageDataset(img_dir='/scratch1/zamzam/HCP_nt_val')
 val_dsetCamCan = CustomImageDataset(img_dir='/scratch1/akrami/CAMCAN_nt_val')
 
 val_dset = torch.utils.data.ConcatDataset([val_dsetHCP, val_dsetCamCan])
-val_loader = DataLoader(val_dset, batch_size=2,shuffle=True,num_workers=1)
+val_loader = DataLoader(val_dset, batch_size=20,shuffle=True,num_workers=1)
 
 
 model = unet.UNet(
@@ -81,7 +81,7 @@ model = unet.UNet(
     num_res_units=3).to(device)
 
 optimizer = torch.optim.Adam(model.parameters(), 1e-4)
-loss = torch.nn.MSELoss()
+loss = torch.nn.MSELoss(reduction = 'none')
 
 def count_parameters(model):
     return sum(p.numel() for p in model.parameters() if p.requires_grad)
@@ -104,12 +104,16 @@ for epoch in range(1000):
         
         L = loss(output, T2)
 
-        running_mean = torch.cat((running_mean, torch.tensor([L.item()],device=device))) 
+        if epoch>4:
+            running_mean = running_mean.detach()
+            running_mean = torch.cat((running_mean, torch.mean(L, axis=(1,2,3))))
+            if running_mean.size(0)>len(train_dset)*4:
+                running_mean = running_mean[-len(train_dset)*4:]
 
-        if epoch==0:
-            mse = L
+        if epoch<=5:
+            mse = torch.mean(L)
         else:
-            mse = L + torch.pow(((L-torch.mean(running_mean.detach()))/(torch.std(running_mean.detach()))),4)
+            mse = torch.mean(L) + torch.pow((torch.mean(running_mean-torch.mean(running_mean))/torch.std(running_mean)),4)
 
         
         mse.backward()
@@ -140,4 +144,4 @@ for epoch in range(1000):
         print('  * val  ' +
         f'Loss: {total_loss/len(val_dset):.7f}, ')
 
-    torch.save(model.state_dict(), '/home1/zamzam/Fairness/modelsKurtosis/model{}.pth'.format(epoch))
+    torch.save(model.state_dict(), '/home1/zamzam/Fairness/modelsKurtosis/model_1_{}.pth'.format(epoch))
