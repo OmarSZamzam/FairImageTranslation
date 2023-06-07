@@ -177,7 +177,7 @@ for epoch in range(1000):
         
         model.zero_grad()
         
-        LC = lossC(classifier(latent.detach()), sorted_tensor.unsqueeze(1).detach())
+        LC = lossC(classifier(latent), sorted_tensor.unsqueeze(1).detach())
                 
         mse = torch.mean(L) - LC
         
