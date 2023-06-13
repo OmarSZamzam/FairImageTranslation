@@ -17,6 +17,8 @@ manualSeed = 999
 random.seed(manualSeed)
 torch.manual_seed(manualSeed)
 
+print("This is T1T2Classifier job.")
+
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 class CustomImageDataset(Dataset):
@@ -64,13 +66,13 @@ train_dsetHCP = CustomImageDataset(img_dir='/scratch1/zamzam/HCP_nt_train')
 train_dsetCamCan = CustomImageDataset(img_dir='/scratch1/akrami/CAMCAN_nt_train')
 
 train_dset = torch.utils.data.ConcatDataset([train_dsetHCP, train_dsetCamCan])
-train_loader = DataLoader(train_dset, batch_size=2,shuffle=True,num_workers=1)
+train_loader = DataLoader(train_dset, batch_size=20,shuffle=True,num_workers=1)
 
 val_dsetHCP = CustomImageDataset(img_dir='/scratch1/zamzam/HCP_nt_val')
 val_dsetCamCan = CustomImageDataset(img_dir='/scratch1/akrami/CAMCAN_nt_val')
 
 val_dset = torch.utils.data.ConcatDataset([val_dsetHCP, val_dsetCamCan])
-val_loader = DataLoader(val_dset, batch_size=2,shuffle=True,num_workers=1)
+val_loader = DataLoader(val_dset, batch_size=20,shuffle=True,num_workers=1)
 
 
 
@@ -150,6 +152,7 @@ lossC = torch.nn.BCEWithLogitsLoss()
 
 for epoch in range(1000):
     total_loss = 0
+    pred = 0
     for i, data in enumerate(tqdm(train_loader)):
         
         classifier.zero_grad()
@@ -177,9 +180,11 @@ for epoch in range(1000):
         
         model.zero_grad()
         
-        LC = lossC(classifier(latent), sorted_tensor.unsqueeze(1).detach())
+        LC = lossC(classifier(latent), (1-sorted_tensor).unsqueeze(1).detach())
+
+        pred = pred*i/(i+1) + classifier(latent).mean().item()/(i+1)
                 
-        mse = torch.mean(L) - LC
+        mse = torch.mean(L) + LC
         
         mse.backward()
         
@@ -189,7 +194,8 @@ for epoch in range(1000):
         total_loss += mse
         
     print('  * train  ' +
-    f'Loss: {total_loss/len(train_dset):.7f}, ')
+    f'Loss: {total_loss/len(train_dset):.7f}, ' +
+    f'Classifier Prediction: {pred:.7f}, ')
     
     if epoch%2==0:
         total_loss = 0
@@ -210,4 +216,4 @@ for epoch in range(1000):
         print('  * val  ' +
         f'Loss: {total_loss/len(val_dset):.7f}, ')
     if epoch%10==0:
-        torch.save(model.state_dict(), '/home1/zamzam/Fairness/modelsClassifier/model{}.pth'.format(epoch))
+        torch.save(model.state_dict(), '/home1/zamzam/FairnessClean/modelsClassifier/model{}.pth'.format(epoch))
