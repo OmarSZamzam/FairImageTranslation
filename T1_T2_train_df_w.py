@@ -207,7 +207,7 @@ optimizer = torch.optim.Adam(params=model.parameters(), lr=2.5e-5)
 inferer = DiffusionInferer(scheduler)
 
 
-n_epochs = 200 #4000
+n_epochs = 107 #4000
 val_interval = 2 #50
 epoch_loss_list = []
 val_epoch_loss_list = []
@@ -215,7 +215,7 @@ pre_train =True
 pre_epoch = 0
 
 if pre_train:
-    pre_epoch = 49
+    pre_epoch = 253
     model.load_state_dict(torch.load( f'/scratch1/akrami/Projects/T1_T2/models/diff/T1_T2{pre_epoch}_b20_w.pt'))
     print('loaded the pre train model')
 

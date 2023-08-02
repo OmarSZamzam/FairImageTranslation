@@ -20,6 +20,7 @@ import torch.nn.functional as F
 import sys
 import csv
 import pandas as pd
+import matplotlib.pyplot as plt
 
 with tqdm(total=100, dynamic_ncols=False) as pbar:
     for i in range(100):
@@ -138,7 +139,7 @@ optimizer = torch.optim.Adam(params=model.parameters(), lr=2.5e-5)
 inferer = DiffusionInferer(scheduler)
 
 
-n_epochs = 200 #4000
+n_epochs = 100 #4000
 val_interval = 2 #50
 epoch_loss_list = []
 val_epoch_loss_list = []
@@ -146,8 +147,8 @@ pre_train =True
 pre_epoch = 0
 
 if pre_train:
-    pre_epoch = 40
-    model.load_state_dict(torch.load( f'/scratch1/akrami/Projects/T1_T2/models/T1_T2{pre_epoch}_b20_diff_s4.pt'))
+    pre_epoch = 99
+    model.load_state_dict(torch.load( f'/scratch1/akrami/Projects/T1_T2/models/diff/T1_T2{pre_epoch}_0.1_diff_s4.pt'))
     print('loaded the pre train model')
 
 
@@ -194,7 +195,7 @@ for epoch in range(n_epochs):
             losses[2] = torch.nan_to_num(torch.mean(initial[(np.array(s)=='M') & (np.array(d)==0)]), nan=100)
             losses[3] = torch.nan_to_num(torch.mean(initial[(np.array(s)=='F') & (np.array(d)==0)]), nan=100)
 
-            mse = torch.mean(initial) + torch.mean((losses - torch.min(losses))[losses!=100])
+            mse = torch.mean(initial) +0.1* torch.mean((losses - torch.min(losses))[losses!=100])
             #loss = F.mse_loss(prediction.float(), noise.float())
         scaler.scale(mse).backward()
         scaler.step(optimizer)
@@ -208,7 +209,7 @@ for epoch in range(n_epochs):
     if (epoch) % val_interval == 0:
         model.eval()
         val_epoch_loss = 0
-        torch.save(model.state_dict(), f'/scratch1/akrami/Projects/T1_T2/models/T1_T2{epoch+pre_epoch}_b20_diff_s4.pt')
+        torch.save(model.state_dict(), f'/scratch1/akrami/Projects/T1_T2/models/diff/T1_T2{epoch+pre_epoch}_0.1_diff_s4.pt')
         for step, data in enumerate(val_loader):
             
             T1, T2, s, _, d = data
@@ -233,9 +234,7 @@ for epoch in range(n_epochs):
 
 
 
-torch.save(model.state_dict(), f'/scratch1/akrami/Projects/T1_T2/models/T1_T2{epoch+pre_epoch}_b20_diff_s4.pt')
-total_time = time.time() - total_start
-print(f"train diffusion completed, total time: {total_time}.")
+torch.save(model.state_dict(), f'/scratch1/akrami/Projects/T1_T2/models/diff/T1_T2{epoch+pre_epoch}_0.1_diff_s4.pt')
 plt.style.use("seaborn-bright")
 plt.title("Learning Curves Diffusion Model", fontsize=20)
 plt.plot(np.linspace(1, n_epochs, n_epochs), epoch_loss_list, color="C0", linewidth=2.0, label="Train")
@@ -252,4 +251,4 @@ plt.xlabel("Epochs", fontsize=16)
 plt.ylabel("Loss", fontsize=16)
 plt.legend(prop={"size": 14})
 plt.show()
-plt.savefig(f'./"result_translation/loss_differ_diff_s4.png')
+plt.savefig(f'./"result_translation/loss_differ_diff__0.1_s4.png')
